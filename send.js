@@ -8,7 +8,8 @@ function hook(symbol) {
       if (symbol === 'xpc_connection_send_message_with_reply' && !args[3].isNull()) {
         // async reply
         const cb = new ObjC.Block(args[3]).implementation;
-        const block =  new ObjC.Block({
+        // hook the callback
+        args[3] = new ObjC.Block({
           retType: 'void',
           argTypes: ['object'],
           implementation: function(reply) {
