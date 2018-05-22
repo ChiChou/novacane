@@ -1,33 +1,33 @@
-
-function hook(symbol) {
+function hook(suffix) {
+  const symbol = 'xpc_connection_send_message' + suffix;
   Interceptor.attach(Module.findExportByName(null, symbol), {
     onEnter: function (args) {
       const conn = new ObjC.Object(args[0]);
       const msg = new ObjC.Object(args[1]);
-      const content = [symbol + ':', conn, msg];
-      if (symbol === 'xpc_connection_send_message_with_reply' && !args[3].isNull()) {
-        // async reply
-        const cb = new ObjC.Block(args[3]).implementation;
-        // hook the callback
-        args[3] = new ObjC.Block({
-          retType: 'void',
-          argTypes: ['object'],
-          implementation: function(reply) {
-            console.log('async reply:\n' + new ObjC.Object(reply));
-            return cb(reply);
-          }
-        });
+      const lines = ['', symbol + ' >>>', conn, msg];
+      if (suffix === '_with_reply') {
+        const withReply = new ObjC.Block(args[3]);
+        const origin = withReply.implementation;
+        const buf = lines.join('\n');
+        withReply.implementation = function(reply) {
+          console.log([buf, 'async reply <<<', reply].join('\n'));
+          return origin.call(this, reply);
+        }
       }
-      console.log(content.join('\n'));
+      this.lines = lines;
     },
     onLeave(retVal) {
-      if (symbol === 'xpc_connection_send_message_with_reply_sync') {
-        console.log('send sync, reply:\n' + new ObjC.Object(retVal));
+      const lines = this.lines;
+      if (suffix === '_with_reply_sync') {
+        lines.push('sync reply <<<');
+        lines.push(new ObjC.Object(retVal));
       }
+      if (suffix !== '_with_reply')
+        console.log(lines.join('\n'));
     }
   })
 }
 
-hook('xpc_connection_send_message');
-hook('xpc_connection_send_message_with_reply');
-hook('xpc_connection_send_message_with_reply_sync');
+hook('');
+hook('_with_reply');
+hook('_with_reply_sync');
