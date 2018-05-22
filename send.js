@@ -7,11 +7,11 @@ function hook(suffix) {
       const lines = ['', symbol + ' >>>', conn, msg];
       if (suffix === '_with_reply') {
         const withReply = new ObjC.Block(args[3]);
-        const origin = withReply.implementation;
+        const original = withReply.implementation;
         const buf = lines.join('\n');
         withReply.implementation = function(reply) {
           console.log([buf, 'async reply <<<', reply].join('\n'));
-          return origin.call(this, reply);
+          return original.call(this, reply);
         }
       }
       this.lines = lines;
