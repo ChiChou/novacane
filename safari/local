@@ -1,1 +1,3 @@
-sudo frida webinspectord -l enable-inspect.js
+launchctl start com.apple.webinspectord
+frida webinspectord -l enable-inspect.js
+
