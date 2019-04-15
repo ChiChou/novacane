@@ -1,1 +1,1 @@
-sudo frida -U webinspectord -l enable-inspect.js
+frida -U webinspectord -l $(dirname "$0")/enable-inspect.js

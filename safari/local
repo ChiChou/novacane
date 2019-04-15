@@ -1,3 +1,3 @@
 launchctl start com.apple.webinspectord
-frida webinspectord -l enable-inspect.js
+frida webinspectord -l $(dirname "$0")/enable-inspect.js
 
