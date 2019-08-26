@@ -1,0 +1,20 @@
+{
+  "name": "novacane",
+  "version": "1.0.0",
+  "description": "",
+  "main": "",
+  "dependencies": {
+    "frida": "^12.6.17"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChiChou/novacane.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ChiChou/novacane/issues"
+  },
+  "homepage": "https://github.com/ChiChou/novacane#readme"
+}
