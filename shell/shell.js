@@ -1,4 +1,6 @@
 const frida = require('frida')
+const os = require('os')
+const path = require('path')
 
 module.exports = async function () {
   const dev = await frida.getUsbDevice()
@@ -7,7 +9,22 @@ module.exports = async function () {
     cwd: '/var/root',
   })
 
-  process.stdin.on('data', data => dev.input(pid, data))
+  function fix(buf) {
+    if (os.EOL === '\n') return buf
+
+    let next = 0
+    let left = 0
+    const output = []
+    const br = Buffer.from('\n')
+    while ((next = buf.indexOf(os.EOL, left)) > -1) {
+      output.push(buf.slice(left, next))
+      output.push(br)
+      left = next + 1
+    }
+    return Buffer.concat(output)
+  }
+
+  process.stdin.on('data', data => dev.input(pid, fix(data)))
   const mapping = [null, process.stdout, process.stderr]
   dev.output.connect((processId, fd, data) => {
     if (processId === pid)
