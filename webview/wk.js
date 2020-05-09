@@ -9,8 +9,16 @@ Interceptor.attach(ObjC.classes.WKUserContentController['- addScriptMessageHandl
 Interceptor.attach(ObjC.classes.WKWebView['- evaluateJavaScript:completionHandler:'].implementation, {
 	onEnter: function(args) {
 		const script = new ObjC.Object(args[2]).toString()
-		const handler = new ObjC.Block(args[3])
+		// const handler = new ObjC.Block(args[3])
 		console.log('script:', script)
-		console.log('callback:', handler.implementation)
 	}
 })
+
+if ('WebViewJavascriptBridge' in ObjC.classes) {
+	Interceptor.attach(ObjC.classes.WebViewJavascriptBridge['- registerHandler:handler:'].implementation, {
+		onEnter: function(args) {
+			const name = new ObjC.Object(args[2]).toString()
+			const handler = new ObjC.Object()
+		}
+	})
+}
