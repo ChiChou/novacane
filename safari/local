@@ -1,3 +1,5 @@
-launchctl start com.apple.webinspectord
+#!/bin/sh
+
+launchctl kickstart -k -p gui/501/com.apple.webinspectord
 frida webinspectord -l $(dirname "$0")/enable-inspect.js
 
