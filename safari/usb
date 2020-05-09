@@ -1,4 +1,10 @@
 #!/bin/sh
 
+cwd=$(dirname "$0")
+
+if [[ -x $cwd/helper/start ]]
+then
+  $cwd/helper/start
+fi
 # frida -U -f /bin/launchctl -q -e '' --stdio=pipe --no-pause -- kickstart -k -p system/com.apple.webinspectord
-frida -U webinspectord -l $(dirname "$0")/enable-inspect.js
+frida -U webinspectord -l $cwd/enable-inspect.js
