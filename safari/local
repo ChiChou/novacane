@@ -1,5 +1,5 @@
 #!/bin/sh
 
+open -a Safari
 launchctl kickstart -k -p gui/501/com.apple.webinspectord
 frida webinspectord -l $(dirname "$0")/enable-inspect.js
-
