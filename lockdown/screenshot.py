@@ -17,7 +17,7 @@ class Channel(object):
 
     def version_exchange(self):
         magic, major, minor = self.read()
-        assert major == 300
+        assert major = 300
         assert magic == 'DLMessageVersionExchange'
         assert minor > -1
         self.write(['DLMessageVersionExchange', 'DLVersionsOk', major])
