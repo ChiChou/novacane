@@ -4,7 +4,7 @@
   "description": "",
   "main": "",
   "dependencies": {
-    "frida": "^12.11.9"
+    "frida": "^15.1.17"
   },
   "devDependencies": {},
   "repository": {
