@@ -4,9 +4,9 @@
   "description": "",
   "main": "",
   "dependencies": {
-    "frida": "^15.1.17"
+    "frida": "^16.0.11",
+    "ssh2": "^1.11.0"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChiChou/novacane.git"
@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/ChiChou/novacane/issues"
   },
-  "homepage": "https://github.com/ChiChou/novacane#readme"
+  "homepage": "https://github.com/ChiChou/novacane#readme",
+  "devDependencies": {
+    "@types/frida-gum": "^18.3.1"
+  }
 }
