@@ -1,5 +1,3 @@
-if (Process.arch !== 'arm64') throw new Error('ARM 64-bit only, please contribute for other archs');
-
 function findCaller() {
     const methods = ['- _decodeAndInvokeMessageWithEvent:flags:', '- _decodeAndInvokeMessageWithEvent:reply:flags:'];
     for (const sel of methods) {
@@ -20,6 +18,8 @@ function *findPatchPoints(start) {
     let p = start
     let counter = 0
 
+    const mnemonic = Process.arch === 'arm64' ? 'bl' : 'call';
+
     /**
 __NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT_S0__
 __NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT__
@@ -30,7 +30,7 @@ __NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT_S1__
      */
     while (p.compare(end) < 0) {
         const inst = Instruction.parse(p)
-        if (inst.mnemonic === 'bl') {
+        if (inst.mnemonic === mnemonic) {
             const callee = inst.operands[0].value
             const symbol = DebugSymbol.fromAddress(ptr(callee))
 
