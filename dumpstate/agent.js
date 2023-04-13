@@ -1,4 +1,4 @@
-rpc.exports.dumpstate = function() {
+function dumpstate() {
   Module.load('/System/Library/PrivateFrameworks/ServiceManagement.framework/ServiceManagement');
   const copyAll = new NativeFunction(Module.findExportByName('ServiceManagement', 'SMCopyAllJobDictionaries'), 'pointer', ['pointer']);
   const release = new NativeFunction(Module.findExportByName(null, 'CFRelease'), 'void', ['pointer']);
@@ -8,3 +8,5 @@ rpc.exports.dumpstate = function() {
   release(result);
   return description;
 }
+
+console.log(dumpstate());
