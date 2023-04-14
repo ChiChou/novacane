@@ -11,13 +11,22 @@ const { Client } = require('ssh2');
 async function scan(device) {
     const canidates = [22, 44]
     for (const port of canidates) {
-        const channel = await device.openChannel(`tcp:${port}`);
+        let channel
+
+        try {
+            channel = await device.openChannel(`tcp:${port}`);
+        } catch(e) {
+            continue
+        }
+
         const yes = await new Promise((resolve) => {
             channel.once('data', data => resolve(data.readUInt32BE() === 0x5353482d)); // SSH-
             setTimeout(() => resolve(false), 500);
         })
+
         if (yes) return port
     }
+
     throw Error('port not found')
 }
 
@@ -102,4 +111,4 @@ async function main() {
     process.exit();
 }
 
-main();
+main()
