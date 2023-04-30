@@ -1,6 +1,5 @@
 const frida = require('frida')
 const os = require('os')
-const path = require('path')
 
 module.exports = async function () {
   const dev = await frida.getUsbDevice()
