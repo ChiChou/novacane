@@ -59,7 +59,7 @@ async function main() {
   }
 
   const conn = new Client();
-  conn.on('ready', function () {
+  conn.on('ready', () => {
     conn.shell({ term: process.env.TERM || 'vt100' }, (err, stream) => {
       if (err) {
         reject(err)
