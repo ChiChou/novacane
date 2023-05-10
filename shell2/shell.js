@@ -1,3 +1,7 @@
+#!/usr/bin/env node
+
+'use strict';
+
 const frida = require('frida');
 const { Client } = require('ssh2');
 
@@ -10,23 +14,20 @@ const { Client } = require('ssh2');
 async function scan(device) {
   const canidates = [22, 44]
   for (const port of canidates) {
-    let channel;
-    try {
-      channel = await device.openChannel(`tcp:${port}`);
-    } catch(e) {
-      continue;
-    }
-  
-    const yes = await new Promise((resolve) => {
-      channel
-        .once('data', data => {
-          resolve(data.readUInt32BE() === 0x5353482d); // SSH-
-          channel.destroy();
-        }).once('error', () => {
-          resolve(false);
-        });
-    })
-    if (yes) return port
+    const ok = await device.openChannel(`tcp:${port}`)
+      .then((channel) => new Promise((resolve) => {
+        channel
+          .once('data', data => {
+            resolve(data.readUInt32BE() === 0x5353482d); // SSH-
+            channel.destroy();
+          })
+          .once('error', () => {
+            resolve(false);
+          });
+      }))
+      .catch(() => false);
+
+    if (ok) return port;
   }
   throw Error('port not found')
 }
