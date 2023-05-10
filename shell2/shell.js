@@ -10,7 +10,13 @@ const { Client } = require('ssh2');
 async function scan(device) {
   const canidates = [22, 44]
   for (const port of canidates) {
-    const channel = await device.openChannel(`tcp:${port}`);
+    let channel;
+    try {
+      channel = await device.openChannel(`tcp:${port}`);
+    } catch(e) {
+      continue;
+    }
+  
     const yes = await new Promise((resolve) => {
       channel
         .once('data', data => {
