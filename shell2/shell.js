@@ -97,12 +97,14 @@ async function interactive(client) {
         process.stdout.on('resize', onResize);
       }
 
-      client.once('end', () => {
-        cleanup();
-        resolve();
-      });
+      client.once('end', () => onError(new Error('Connection closed')));
 
-      stream.on('error', onError);
+      stream
+        .on('error', onError)
+        .on('end', () => {
+          resolve();
+          cleanup();
+        })
     });
   });
 }
@@ -112,6 +114,7 @@ async function main() {
   const client = await connect(device);
 
   await interactive(client);
+  client.end();
 }
 
 main();
