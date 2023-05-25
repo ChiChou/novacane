@@ -32,56 +32,86 @@ async function scan(device) {
   throw Error('port not found')
 }
 
-async function main() {
-  const device = await frida.getUsbDevice();
+async function connect(device, user='root', password='alpine') {
   const port = await scan(device);
   const channel = await device.openChannel(`tcp:${port}`);
 
-  const username = 'root'
-  const password = 'alpine'
-
-  const pipeStream = stream => {
-    const { stdin, stdout, stderr } = process;
-    const { isTTY } = stdout;
-
-    if (isTTY && stdin.setRawMode) stdin.setRawMode(true);
-
-    stream.pipe(stdout);
-    stream.stderr.pipe(stderr);
-    stdin.pipe(stream);
-
-    const onResize = isTTY && (() => stream.setWindow(stdout.rows, stdout.columns, null, null));
-    if (isTTY) {
-      stream.once('data', onResize)
-      process.stdout.on('resize', onResize)
-    }
-    stream.on('close', () => {
-      if (isTTY) process.stdout.removeListener('resize', onResize)
-      stream.unpipe()
-      stream.stderr.unpipe()
-      stdin.unpipe()
-      if (stdin.setRawMode) stdin.setRawMode(false)
-      stdin.unref()
-    })
-  }
-
-  const conn = new Client();
-  conn.on('ready', () => {
-    conn.shell({ term: process.env.TERM || 'vt100' }, (err, stream) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      pipeStream(stream)
-      stream.on('close', () => {
-        conn.end();
-      })
-    });
-  }).connect({
-    sock: channel,
-    username,
-    password
+  const client = new Client();
+  return new Promise((resolve, reject) => {
+    client
+      .on('ready', () => resolve(client))
+      .on('error', reject)
+      .connect({
+        sock: channel,
+        username: user,
+        password,
+      });
   });
 }
 
-main()
+async function interactive(client) {
+  const { stdin, stdout, stderr } = process;
+  const { isTTY } = stdout;
+
+  return new Promise((resolve, reject) => {
+    client.shell({ term: process.env.TERM || 'vt100' }, (err, stream) => {
+      if (err) {
+        return reject(err);
+      }
+
+      if (isTTY && stdin.setRawMode) {
+        stdin.setRawMode(true);
+      }
+
+      stream.pipe(stdout);
+      stream.stderr.pipe(stderr);
+      stdin.pipe(stream);
+
+      const onResize = () => {
+        const [w, h] = process.stdout.getWindowSize();
+        stream.setWindow(`${stdout.rows}`, `${stdout.columns}`, `${w}`, `${h}`)
+      };
+
+      const cleanup = () => {
+        if (isTTY) {
+          stdout.removeListener('resize', onResize);
+          if (stdin.setRawMode) stdin.setRawMode(false);
+        }
+
+        stream.unpipe();
+        stream.stderr.unpipe();
+        stdin.unpipe();
+
+        // stdin.unref();
+        // stdout.unref();
+        // stderr.unref();
+      }
+
+      const onError = (err) => {
+        cleanup();
+        reject(err);
+      }
+
+      if (isTTY) {
+        stream.once('data', onResize);
+        process.stdout.on('resize', onResize);
+      }
+
+      client.once('end', () => {
+        cleanup();
+        resolve();
+      });
+
+      stream.on('error', onError);
+    });
+  });
+}
+
+async function main() {
+  const device = await frida.getUsbDevice();
+  const client = await connect(device);
+
+  await interactive(client);
+}
+
+main();
