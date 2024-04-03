@@ -1,56 +1,60 @@
-/**
- * @param {NativePointer} start 
- */
-function *findPatchPoints() {
-    for (const symbol of Module.enumerateSymbols('Foundation')) {
-        const m = symbol.name.match(/^__NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT(_S([0-4]))?__$/)
-        if (m) {
-            const count = m[1] ? parseInt(m[2]) : 0;
-            yield [symbol.address, count]
-        }
-    }
-}
+// DebugSymbol.findFunctionsMatching is faster than DebugSymbol.getFunctionByName
 
-for (const [addr, count] of findPatchPoints()) {
-    console.log(`hook ${addr} with args count ${count}`);
+const invoker = DebugSymbol.findFunctionsMatching('__NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT__').pop()
+Interceptor.attach(invoker, {
+    onEnter(args) {
+        const invocation = new ObjC.Object(args[0]);
+        const target = invocation.target();
+        const selector = invocation.selector();
 
-    const callbacks = count === 0 ? {
-        onEnter(args) {
-            const invocation = new ObjC.Object(args[0]);
-            const selector = invocation.selector();
-            const selectorName = ObjC.selectorAsString(selector);
-            const signature = invocation.methodSignature();
-            const argCount = signature.numberOfArguments();
+        const imp = target.methodForSelector_(selector).strip();
+        const signature = target.methodSignatureForSelector_(selector);
 
-            const formattedArgs = [];
-            const v = Memory.alloc(Process.pointerSize);
-            for (let i = 2; i < argCount; i++) {
-                invocation.getArgument_atIndex_(v, i);
-                const t = signature.getArgumentTypeAtIndex_(i);
-                const arg = v.readPointer();
-                const wrapped = t === '@' ? new ObjC.Object(arg) : arg;
-                formattedArgs.push(wrapped);
+        this.hook = Interceptor.attach(imp, {
+            onEnter(innerArgs) {
+                const nargs = signature.numberOfArguments();
+                const formattedArgs = [];
+                for (let i = 2; i < nargs; i++) { // skip self and selector
+                    const arg = innerArgs[i];
+                    /** @type {ObjC.Object} */
+                    const t = signature.getArgumentTypeAtIndex_(i);
+                    const wrapped = t.toString().startsWith('@') ? new ObjC.Object(arg) : arg;
+                    formattedArgs.push(wrapped);
+                }
+
+                const detail = ObjC.selectorAsString(selector).replace(/:/g, () => `:${formattedArgs.shift()} `);
+                console.log(`-> ${target} ${detail})}`);
             }
+        })
+    },
+    onLeave() {
+        this.hook.detach();
+    }
+})
 
-            const targetClass = invocation.target();
-            const detail = selectorName.replace(/:/g, () => `:${formattedArgs.shift()} `);
-            console.log(`${targetClass} ${selectorName} ${detail}`);
-        }
-    } : {
+for (const func of DebugSymbol.findFunctionsMatching('__NSXPCCONNECTION_IS_CALLING_OUT_TO_EXPORTED_OBJECT_S*')) {
+    const plain = func.strip();
+    if (Process.findModuleByAddress(plain)?.name !== 'Foundation') continue;
+
+    // console.log(DebugSymbol.fromAddress(func));
+
+    Interceptor.attach(plain, {
         onEnter(args) {
             const targetClass = new ObjC.Object(args[0]);
             const selectorName = ObjC.selectorAsString(args[1]);
-
+            const signature = targetClass.methodSignatureForSelector_(args[1]);
+            const nargs = signature.numberOfArguments();
             const formattedArgs = [];
-            for (let i = 0; i < count; i++) {
-                const str = new ObjC.Object(args[2 + i]);
-                formattedArgs.push(str);
+            for (let i = 2; i < nargs; i++) { // skip self and selector
+                const arg = args[i];
+                /** @type {ObjC.Object} */
+                const t = signature.getArgumentTypeAtIndex_(i);
+                const wrapped = t.toString().startsWith('@') ? new ObjC.Object(arg) : arg;
+                formattedArgs.push(wrapped);
             }
 
             const detail = selectorName.replace(/:/g, () => `:${formattedArgs.shift()} `);
-            console.log(`${targetClass} ${detail})}`);
+            console.log(`-> ${targetClass} ${detail})}`);
         }
-    }
-
-    Interceptor.attach(addr, callbacks)
+    })
 }
