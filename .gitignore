@@ -1,4 +1,5 @@
 .ccls-cache/
+.DS_Store
 
 # Logs
 logs
