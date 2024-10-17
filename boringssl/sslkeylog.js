@@ -1,16 +1,20 @@
 if (Process.arch !== "arm64") throw new Error("Unsupported architecture");
 
-const boringssl = Module.load("/usr/lib/libboringssl.dylib");
-const { address } = boringssl.enumerateSymbols().find((s) => s.name.includes("ssl_log_secret"));
-
-if (!address) throw new Error("ssl_log_secret not found");
+const boringssl = Process.getModuleByName("libboringssl.dylib");
 
 /**
  *
- * @param {NativePointer} address
  * @returns {Number}
  */
-function findOffset(address) {
+function findOffset() {
+  const moduleMap = new ModuleMap(m => m.name === "libboringssl.dylib");
+  const addresses =
+    DebugSymbol.findFunctionsMatching('bssl::ssl_log_secret*')
+      .filter(addr => moduleMap.has(addr))
+
+  if (!addresses.length) throw new Error("bssl::ssl_log_secret not found");
+
+  const address = addresses.at(0);
   for (let i = 0; i < 16; i++) {
     const addr = address.add(i * 4);
     const instr = Instruction.parse(addr);
@@ -37,8 +41,8 @@ function keyLogger(ssl, line) {
 }
 
 const logCallback = new NativeCallback(keyLogger, "void", ["pointer", "pointer"]);
+const offset = findOffset();
 
-const offset = findOffset(address);
 Interceptor.attach(boringssl.findExportByName("SSL_CTX_set_info_callback"), {
   onEnter: function (args) {
     const ssl = args[0];
